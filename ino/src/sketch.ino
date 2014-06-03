@@ -8,33 +8,44 @@ const uint8_t LATCH_PIN = 3;    //  orange
 const uint8_t DATA_PIN  = 4;    //  yellow
 const uint8_t CLOCK_PIN = 5;    //  red
                                 //  brown = GND
+const uint8_t LED_PIN = 13;
 
-uint8_t value;
+volatile uint8_t value;
 
 void setup()
 {
-    noInterrupts();
+    pinMode(LATCH_PIN, INPUT_PULLUP);
+    pinMode(CLOCK_PIN, INPUT_PULLUP);
+    pinMode(DATA_PIN, OUTPUT);
 
-    pinMode(LATCH_PIN, INPUT); 
-    pinMode(CLOCK_PIN, INPUT); 
-    pinMode(DATA_PIN, OUTPUT); 
+    digitalWrite(DATA_PIN, LOW);
 
-    attachInterrupt(1, latchISR, FALLING);
+    // enable led, turn off
+    pinMode(LED_PIN, OUTPUT);
+    digitalWrite(LED_PIN, LOW);
 
     value = 0;
 
-    interrupts();
+    attachInterrupt(1, latchISR, RISING);
 }
 
 void loop()
 {
-    value++; 
-    delay(500);
+    value++;
+    delay(1000);
+
+    // flash led
+    digitalWrite(LED_PIN, HIGH);
+    delay(50);
+    digitalWrite(LED_PIN, LOW);
 }
 
+// This ISR must be attached to the latch pin on a RISING edge.
+// Check NES controller data flow for reference.
+//
 void latchISR()
 {
-    shiftOutWithClk(DATA_PIN, CLOCK_PIN, LSBFIRST, value);   
+    shiftOutWithClk(DATA_PIN, CLOCK_PIN, LSBFIRST, value);
 }
 
 // Same as shiftOut, but uses the clockPin as an external clock,
@@ -43,18 +54,22 @@ void latchISR()
 void shiftOutWithClk(uint8_t dataPin, uint8_t clockPin, uint8_t bitOrder, uint8_t val)
 {
     uint8_t i;
+    uint8_t vb;
 
     for (i = 0; i < 8; i++)  {
-        // wait for falling edge (1 to 0)
-        while (digitalRead(clockPin) == HIGH);
-
         if (bitOrder == LSBFIRST) {
-            digitalWrite(dataPin, !!(val & (1 << i)));
+            vb = !!(val & (1 << i));
         } else {
-            digitalWrite(dataPin, !!(val & (1 << (7 - i))));
+            vb = !!(val & (1 << (7 - i)));
         }
-    
-        // wait for rising edge (0 to 1)
+
+        // write the inverted value (NES inverts it)
+        digitalWrite(dataPin, !vb);
+
+        // wait for a full cycle of the clock
+        while (digitalRead(clockPin) == HIGH);
         while (digitalRead(clockPin) == LOW);
-    }   
+    }
+
+    digitalWrite(dataPin, LOW);
 }
