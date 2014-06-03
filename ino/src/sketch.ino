@@ -6,6 +6,8 @@ const uint8_t INPUT_PINS[8] = { 9, 8, 7, 6, 5, 4, 3, 2 };
 
 uint8_t value;
 
+// NOTE The NES inverts all bits sent on DATA, so we invert them here too.
+
 void setup()
 {
     // enable led, turn off
@@ -14,7 +16,7 @@ void setup()
 
     for (int i = 0; i < 8; i++) {
         pinMode(INPUT_PINS[i], OUTPUT);
-        digitalWrite(INPUT_PINS[i], HIGH);
+        digitalWrite(INPUT_PINS[i], HIGH);    // inverted LOW, see note above
     }
 
     value = 0;
@@ -41,6 +43,6 @@ void sendValue(uint8_t value)
 {
     for (int i = 7; i >= 0; i--) {
         int res = value >> i;
-        digitalWrite(INPUT_PINS[i], !(res & 1));
+        digitalWrite(INPUT_PINS[i], !(res & 1));    // invert bit, see note above
     }  
 }
