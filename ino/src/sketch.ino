@@ -1,48 +1,45 @@
 // NES serial communication example
 // Sends an incrementing value every 0.5s to the NES
 
-const uint8_t LED_PIN = 13;
-const uint8_t INPUT_PINS[8] = { 9, 8, 7, 6, 5, 4, 3, 2 };
+#define DEBUG
 
-uint8_t value;
-
-// NOTE The NES inverts all bits sent on DATA, so we invert them here too.
+volatile uint8_t value;
 
 void setup()
 {
-    // enable led, turn off
-    pinMode(LED_PIN, OUTPUT);
-    digitalWrite(LED_PIN, LOW);
+    noInterrupts();
 
-    for (int i = 0; i < 8; i++) {
-        pinMode(INPUT_PINS[i], OUTPUT);
-        digitalWrite(INPUT_PINS[i], HIGH);    // inverted LOW, see note above
-    }
+    // Define outputs for DATA
+    //         D11-D8
+    DDRB |= B00001111;    // Low nibble of DDRB  => low nibble of DATA
+    //      D7-D4
+    DDRD |= B11110000;    // High nibble of DDRD => high nibble of DATA
 
-    value = 0;
+    attachInterrupt(0, latchISR, RISING);
 
-    Serial.begin(9600);
+    setValue(0);    // send nothing
+
+    interrupts();
 }
 
-void loop()
-{
-    delay(100);
+void loop() {
+}
 
+// Sets value in bits using 8 output pins (D4-D11)
+inline void setValue(uint8_t value)
+{
+    // NOTE The NES inverts all bits sent on DATA, so we invert them here too.
+    PORTB = (PORTB & 0xf0) | (~value & 0x0f);
+    PORTD = (PORTD & 0x0f) | (~value & 0xf0);
+}
+
+void latchISR()
+{
+    // The NES is trying to latch to the controller and read its values, so we
+    // set a new value as fast as we can with setValue()
+
+    // As an example, increment a counter:
     value++;
-    sendValue(value);
-    Serial.println(value);
 
-    // flash led
-    digitalWrite(LED_PIN, HIGH);
-    delay(50);
-    digitalWrite(LED_PIN, LOW);
-}
-
-// Sends value in bits using the 8 output pins
-void sendValue(uint8_t value)
-{
-    for (int i = 7; i >= 0; i--) {
-        int res = value >> i;
-        digitalWrite(INPUT_PINS[i], !(res & 1));    // invert bit, see note above
-    }  
+    setValue(value);
 }
