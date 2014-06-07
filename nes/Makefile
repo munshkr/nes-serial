@@ -14,4 +14,4 @@ clean:
 	rm -f *.o *.nes serial.s
 
 run:
-	nestopia serial.nes
+	nes serial.nes
