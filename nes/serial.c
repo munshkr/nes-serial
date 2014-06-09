@@ -39,6 +39,8 @@ void put_str(unsigned int adr,const char *str)
 
 void main(void)
 {
+    //unsigned int j;
+
     pal_col(1, 0x30); // white
 
     // initialize update list
@@ -55,13 +57,18 @@ void main(void)
     {
         ppu_wait_frame(); // wait for next TV frame
 
-        val = pad_poll(0);  // poll joystick 0, i contains 8bit value
+        val = pad_poll(1);
 
+        // change update list to reflect new value
         if (val > 0) {
-            // change update list to reflect new value
-            list[2]= val / 100     + 0x10;
-            list[5]= val / 10 % 10 + 0x10;
-            list[8]= val      % 10 + 0x10;
+            list[2] = val / 100     + 0x10;
+            list[5] = val / 10 % 10 + 0x10;
+            list[8] = val      % 10 + 0x10;
+        } else {
+            list[2] = list[5] = list[8] = 0;
         }
+
+        // busy loop to simulate heavy load
+        //for (j = 0; j < 10000; ++j);
     }
 }
