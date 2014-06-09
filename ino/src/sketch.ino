@@ -4,6 +4,7 @@
 #define DEBUG
 
 volatile uint8_t value;
+volatile unsigned long latchTs;
 
 void setup()
 {
@@ -17,6 +18,7 @@ void setup()
 
     attachInterrupt(0, latchISR, RISING);
 
+    latchTs = micros();
     setValue(0);    // send nothing
 
     interrupts();
@@ -37,6 +39,12 @@ void latchISR()
 {
     // The NES is trying to latch to the controller and read its values, so we
     // set a new value as fast as we can with setValue()
+
+    // TODO check how much time it takes the NES to poll the joystick and adjust microseconds here
+    unsigned long nowTs = micros();
+    if (nowTs - latchTs < 1000) return;
+
+    latchTs = nowTs;
 
     // As an example, increment a counter:
     value++;
