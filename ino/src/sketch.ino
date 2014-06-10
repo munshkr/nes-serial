@@ -2,9 +2,14 @@
 // Sends an incrementing value every 0.5s to the NES
 
 #define DEBUG
+#define MIDI_BRIDGE
+
+#include <MIDI.h>
 
 volatile uint8_t value;
 volatile unsigned long latchTs;
+
+uint8_t buttons[8] = { 1, 2, 4, 8, 16, 32, 64, 128 };
 
 void setup()
 {
@@ -22,9 +27,23 @@ void setup()
     setValue(0);    // send nothing
 
     interrupts();
+
+    MIDI.begin();
+
+    #ifdef MIDI_BRIDGE
+      Serial.begin(115200);
+    #endif
+
+    MIDI.setHandleNoteOn(handleNoteOn);
 }
 
 void loop() {
+    MIDI.read();
+}
+
+void handleNoteOn(byte channel, byte pitch, byte velocity)
+{
+    value = buttons[pitch % 8];
 }
 
 // Sets value in bits using 8 output pins (D4-D11)
@@ -40,14 +59,12 @@ void latchISR()
     // The NES is trying to latch to the controller and read its values, so we
     // set a new value as fast as we can with setValue()
 
-    // TODO check how much time it takes the NES to poll the joystick and adjust microseconds here
+    // TODO Check how much time it takes the NES to poll the joystick
+    // and adjust microseconds here.
     unsigned long nowTs = micros();
     if (nowTs - latchTs < 1000) return;
 
-    latchTs = nowTs;
-
-    // As an example, increment a counter:
-    value++;
-
     setValue(value);
+
+    latchTs = nowTs;
 }
